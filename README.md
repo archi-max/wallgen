@@ -38,7 +38,7 @@ than six near-duplicates.
 Requires macOS, [`uv`](https://astral.sh/uv), and one image provider.
 
 ```bash
-git clone https://github.com/YOUR-USER/wallgen.git
+git clone https://github.com/archi-max/wallgen.git
 cd wallgen
 ./wallgen --displays        # uv fetches deps on first run
 ```
