@@ -41,6 +41,7 @@ from PIL import Image, ImageEnhance, ImageFilter
 
 CONFIG_DIR = Path.home() / ".config" / "wallgen"
 CONFIG_ENV = CONFIG_DIR / "env"
+CONFIG_DAILY = CONFIG_DIR / "daily.conf"
 DEFAULT_OUT = Path.home() / "Pictures" / "Wallpapers"
 
 # $ per 1M image-output tokens. Cost is computed from the API's own usage
@@ -129,8 +130,12 @@ def slugify(s: str) -> str:
 
 
 def load_env_files():
-    """Layer key sources: real env wins, then ~/.config/wallgen/env, then ./.env."""
-    for path in (CONFIG_ENV, Path.cwd() / ".env"):
+    """Layer config sources; the real environment always wins.
+
+    daily.conf is included so a hand-run of `wallgen` picks up the same provider
+    settings the launchd job uses, instead of only working under the wrappers.
+    """
+    for path in (CONFIG_ENV, CONFIG_DAILY, Path.cwd() / ".env"):
         if not path.is_file():
             continue
         for line in path.read_text().splitlines():
