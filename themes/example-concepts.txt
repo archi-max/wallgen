@@ -1,0 +1,13 @@
+# Example: concept-first prompts. One prompt per line; blank lines and lines
+# starting with # are ignored. Each line should assert ONE idea made physically
+# literal — that reads in a second, where a mood or a palette does not.
+#
+# Run with:  wallgen "my set" --prompts-file themes/example-concepts.txt
+
+A dense morning commuter crowd flowing through a station concourse, every person rendered flat, grey, faceless and identical, all leaning the same direction in perfect lockstep. One young figure in full saturated colour has stopped and turned to face the opposite way, sharply lit, casting the only real shadow while the grey crowd streams around them. Bold cel-shaded anime, heavy clean linework, flat graphic colour, not photorealistic.
+
+An immense structure rising over a waking city, its left half still only a translucent glowing blue wireframe hanging in empty air, its right half already fully solid stone and glass where the dawn light has swept across it, a clean visible boundary moving over its surface. Small crowds far below have stopped to look up. Bold cel-shaded anime key visual, painted background art.
+
+An utterly ordinary neighbourhood street on a rainy evening — children with umbrellas, a small grocery, warm shop windows, a cat under an awning. Woven unremarked through the whole scene are fine luminous threads running inside the walls and along the overhead wires, quietly feeding every light. Nobody notices them. Mundane and miraculous at once, bold cel-shaded anime, heavy linework.
+
+A single tiny figure on a narrow scaffold, dwarfed almost past visibility, seating one small brilliantly glowing component into an open panel of a mountain-sized machine that already towers into the clouds and is visibly running. The whole colossus is lit by that one small light. Bold cel-shaded anime, cold steel blues against a single warm gold source.

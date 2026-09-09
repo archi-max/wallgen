@@ -1,0 +1,88 @@
+#!/usr/bin/env bash
+# Interactive-ish setup: writes the config, installs two launchd agents.
+#   wallgen-setup install    generate daily + rotate on a timer
+#   wallgen-setup uninstall  remove both agents (config and images kept)
+#   wallgen-setup status     show agent state and recent log lines
+set -uo pipefail
+
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+CFGDIR="$HOME/.config/wallgen"
+CONF="$CFGDIR/daily.conf"
+LABEL_GEN="dev.wallgen.daily"
+LABEL_ROT="dev.wallgen.rotate"
+AGENTS="$HOME/Library/LaunchAgents"
+
+die() { printf 'error: %s\n' "$*" >&2; exit 1; }
+
+write_plist() {  # $1 label  $2 program  $3 interval-seconds  $4 extra-xml
+  cat > "$AGENTS/$1.plist" <<XML
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>$1</string>
+  <key>ProgramArguments</key>
+  <array><string>/bin/bash</string><string>$2</string></array>
+  <key>EnvironmentVariables</key>
+  <dict><key>PATH</key><string>$(dirname "$(command -v uv)"):$(dirname "$(command -v az)"):/usr/bin:/bin:/usr/sbin:/sbin</string></dict>
+  $4
+  <key>RunAtLoad</key><false/>
+  <key>StandardOutPath</key><string>$CFGDIR/$1.out.log</string>
+  <key>StandardErrorPath</key><string>$CFGDIR/$1.err.log</string>
+</dict>
+</plist>
+XML
+}
+
+cmd_install() {
+  command -v uv >/dev/null || die "uv not found — install from https://astral.sh/uv"
+  mkdir -p "$CFGDIR" "$AGENTS"
+
+  if [ ! -f "$CONF" ]; then
+    cp "$HERE/daily.conf.example" "$CONF"
+    printf 'Wrote %s — edit it to choose your theme, then re-run.\n' "$CONF"
+  fi
+  # shellcheck disable=SC1090
+  . "$CONF"
+  [ -n "${THEME:-}${PROMPTS_FILE:-}" ] || die "set THEME or PROMPTS_FILE in $CONF"
+
+  local hour="${DAILY_HOUR:-6}" minute="${DAILY_MINUTE:-30}"
+  write_plist "$LABEL_GEN" "$HERE/scripts/wallgen-daily" "" \
+    "<key>StartCalendarInterval</key><dict><key>Hour</key><integer>$hour</integer><key>Minute</key><integer>$minute</integer></dict>"
+  write_plist "$LABEL_ROT" "$HERE/scripts/wallgen-rotate" "" \
+    "<key>StartInterval</key><integer>${ROTATE_SECONDS:-1800}</integer>"
+
+  for l in "$LABEL_GEN" "$LABEL_ROT"; do
+    launchctl bootout "gui/$UID/$l" 2>/dev/null
+    launchctl bootstrap "gui/$UID" "$AGENTS/$l.plist" || die "could not load $l"
+  done
+  printf 'Installed.\n  generate: daily at %02d:%02d\n  rotate:   every %s min\nEdit %s to change.\n' \
+    "$hour" "$minute" "$(( ${ROTATE_SECONDS:-1800} / 60 ))" "$CONF"
+}
+
+cmd_uninstall() {
+  for l in "$LABEL_GEN" "$LABEL_ROT"; do
+    launchctl bootout "gui/$UID/$l" 2>/dev/null
+    rm -f "$AGENTS/$l.plist"
+  done
+  printf 'Removed both agents. Config and images left untouched.\n'
+}
+
+cmd_status() {
+  for l in "$LABEL_GEN" "$LABEL_ROT"; do
+    if launchctl print "gui/$UID/$l" >/dev/null 2>&1; then
+      printf '  %-20s loaded\n' "$l"
+    else
+      printf '  %-20s not loaded\n' "$l"
+    fi
+  done
+  [ -f "$CONF" ] && { printf '\nconfig (%s):\n' "$CONF"; sed 's/^/  /' "$CONF"; }
+  [ -f "$CFGDIR/daily.log" ] && { printf '\nrecent log:\n'; tail -8 "$CFGDIR/daily.log" | sed 's/^/  /'; }
+}
+
+case "${1:-status}" in
+  install)   cmd_install ;;
+  uninstall) cmd_uninstall ;;
+  status)    cmd_status ;;
+  *) printf 'usage: wallgen-setup [install|uninstall|status]\n'; exit 2 ;;
+esac

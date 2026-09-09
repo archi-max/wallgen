@@ -1,0 +1,31 @@
+# wallgen daily configuration.  Copied to ~/.config/wallgen/daily.conf on install.
+# Edit this file and run `wallgen-setup install` again to apply.
+
+# --- what to generate ------------------------------------------------------
+# Either a free-text THEME (expanded into distinct prompts by a text model)...
+THEME="quiet coastal towns at golden hour"
+
+# ...or a hand-authored prompt file, one prompt per line (takes precedence).
+# PROMPTS_FILE="$HOME/.config/wallgen/my-prompts.txt"
+
+COUNT=6              # images per day
+QUALITY=low          # low | medium | high  — low is ~$0.01/image at 4K
+JOBS=2               # concurrent generations
+KEEP=7               # keep this many days of sets, delete older ones
+
+# --- schedule --------------------------------------------------------------
+DAILY_HOUR=6         # generate at 06:30 local
+DAILY_MINUTE=30
+ROTATE_SECONDS=1800  # advance the desktop picture every 30 minutes
+ROTATE_SCOPE=latest  # latest = today's set only; all = every kept set
+# SHUFFLE=1          # uncomment to rotate randomly instead of in order
+
+# --- provider --------------------------------------------------------------
+# Azure (keys pulled at run time via `az`, nothing stored on disk):
+WALLGEN_AZURE_ACCOUNT="my-ai-services-account"
+WALLGEN_AZURE_GROUP="my-resource-group"
+WALLGEN_AZURE_DEPLOYMENT="gpt-image-2"
+# WALLGEN_TEXT_MODEL="gpt-5.5"          # deployment used to expand THEME
+
+# Or plain OpenAI instead — set the key in ~/.config/wallgen/env and add:
+# PROVIDER=openai

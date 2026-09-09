@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# Daily wallpaper refresh. Reads ~/.config/wallgen/daily.conf, generates a fresh
+# set, sets one immediately, and prunes old sets. Run by the launchd agent.
+set -uo pipefail
+
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+CONF="${WALLGEN_CONF:-$HOME/.config/wallgen/daily.conf}"
+LOG="$HOME/.config/wallgen/daily.log"
+mkdir -p "$(dirname "$LOG")"
+
+log() { printf '%s  %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" >>"$LOG"; }
+
+[ -f "$CONF" ] || { log "no config at $CONF — run wallgen-setup"; exit 78; }
+# shellcheck disable=SC1090
+set -a; . "$CONF"; set +a   # export, so wallgen sees WALLGEN_AZURE_* etc
+
+COUNT="${COUNT:-6}"
+QUALITY="${QUALITY:-low}"
+KEEP="${KEEP:-7}"
+JOBS="${JOBS:-2}"
+
+args=(-n "$COUNT" -q "$QUALITY" --jobs "$JOBS" --prune "$KEEP" --set)
+[ -n "${PROVIDER:-}" ] && args+=(--provider "$PROVIDER")
+if [ -n "${PROMPTS_FILE:-}" ] && [ -f "${PROMPTS_FILE}" ]; then
+  args=(--prompts-file "$PROMPTS_FILE" "${args[@]}")
+  label="${THEME:-$(basename "${PROMPTS_FILE%.*}")}"
+else
+  label="${THEME:?set THEME or PROMPTS_FILE in $CONF}"
+fi
+
+log "start: theme='${label}' count=${COUNT} quality=${QUALITY} keep=${KEEP}"
+out="$("$HERE/wallgen" "$label" "${args[@]}" 2>&1)"
+rc=$?
+printf '%s\n' "$out" | sed -E $'s/\033\\[[0-9;]*m//g; s/^/    /' >>"$LOG"
+log "done (exit $rc)"
+exit $rc

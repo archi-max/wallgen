@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# thin launcher: uv resolves the inline PEP 723 deps, no venv to manage
+exec uv run --quiet --script "$(dirname "$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null || echo "${BASH_SOURCE[0]}")")/wallgen.py" "$@"

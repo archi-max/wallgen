@@ -1,0 +1,10 @@
+# Example: a cohesive landscape set. Simple and reliable — good starting point.
+# Or skip prompt files entirely and just run:  wallgen "misty pine forest at dawn" -n 6
+
+A narrow forest path disappearing into dense dawn mist, tall pine trunks forming vertical silhouettes, soft blue-grey light with pale gold breaking through the canopy, layered depth, quiet stillness, painted background art with fine detail.
+
+A quiet northern lake at first sunrise, low mist drifting above glassy water, a small rocky islet with wind-bent pines, distant treeline fading into haze, warm gold reflection on still water, luminous and calm.
+
+A high ridgeline at sunrise looking out across an immense sea of further peaks and valley cloud, cold blue shadow giving way to warm gold on the summits, thin clear air, enormous scale.
+
+A wide empty coastline in late golden hour, long shadows across wet sand, low islands on the horizon, calm surf, warm amber light and teal shadow, soft haze, unhurried.

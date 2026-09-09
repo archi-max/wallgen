@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Advance the desktop picture one step. Run by the rotation launchd agent.
+set -uo pipefail
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+CONF="${WALLGEN_CONF:-$HOME/.config/wallgen/daily.conf}"
+# shellcheck disable=SC1090
+[ -f "$CONF" ] && { set -a; . "$CONF"; set +a; }
+exec "$HERE/wallgen" --rotate ${SHUFFLE:+--shuffle} --rotate-scope "${ROTATE_SCOPE:-latest}"
