@@ -98,6 +98,23 @@ WALLPAPER_RULES = (
     "clean rendering, high detail, no clutter."
 )
 
+VARY_SYSTEM = """You write prompts for an image model that produces desktop wallpapers.
+
+You are given EXEMPLAR prompts that define a visual and conceptual register: a way of
+composing, a rendering style, and above all a way of turning an abstract idea into a
+physical fact in the scene.
+
+Write {n} COMPLETELY NEW prompts in that same register. Requirements:
+- Do NOT reuse the exemplars' subjects, settings, or objects. New scenes entirely.
+- Keep the exemplars' rendering style and composition habits, stated the same way.
+- Each prompt must assert ONE idea made physically literal, readable at a glance
+  without explanation. No abstractions floating in the air, no holographic UI,
+  no glowing interfaces, no magic. Real materials, real places, real light.
+- 40-70 words each, concrete and visual.
+- Never mention text, words, logos, UI, borders, or aspect ratio.
+
+Return strict JSON: {{"prompts": ["...", "..."]}}"""
+
 PROMPT_SYSTEM = """You write prompts for an image model that produces desktop wallpapers.
 
 Given a THEME, return {n} distinct wallpaper concepts that clearly belong to the same set:
@@ -297,6 +314,46 @@ def expand_theme(theme: str, n: int, model: str, api_key: str, base_url: str | N
     while len(prompts) < n:
         prompts.append(prompts[len(prompts) % len(prompts[:n])])
     return prompts[:n]
+
+
+def vary_prompts(exemplars: list[str], n: int, model: str, api_key: str,
+                 base_url: str | None = None, azure: bool = False,
+                 nudge: str = "") -> list[str]:
+    """Generate n fresh prompts in the register of the exemplars.
+
+    A fixed prompt file re-renders the same scenes every run; this keeps the
+    hand-tuned style and concept discipline while changing what is depicted.
+    """
+    shown = "\n\n".join(f"EXEMPLAR {i}: {p}" for i, p in enumerate(exemplars, 1))
+    body = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": VARY_SYSTEM.format(n=n)},
+            {"role": "user", "content": f"{shown}\n\nWrite {n} new prompts.{nudge}"},
+        ],
+        "response_format": {"type": "json_object"},
+    }
+    if re.match(r"^(gpt-5|gpt-image|o[134])", model):
+        body["max_completion_tokens"] = 8000
+    else:
+        body["max_tokens"] = 4000
+        body["temperature"] = 1.0
+
+    if azure:
+        url = f"{base_url}/openai/v1/chat/completions?api-version={AZURE_API_VERSION}"
+        headers = {"api-key": api_key, "Content-Type": "application/json"}
+    else:
+        url = "https://api.openai.com/v1/chat/completions"
+        headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+
+    r = requests.post(url, headers=headers, json=body, timeout=180)
+    if r.status_code != 200:
+        raise RuntimeError(f"variation failed ({r.status_code}): {r.text[:300]}")
+    parsed = json.loads(r.json()["choices"][0]["message"]["content"])
+    out = [p.strip() for p in parsed["prompts"] if isinstance(p, str) and p.strip()]
+    if not out:
+        raise RuntimeError("variation returned no prompts")
+    return out[:n]
 
 
 def literal_prompts(theme: str, n: int) -> list[str]:
@@ -777,6 +834,10 @@ alternatives:
     g.add_argument("--archive-quality", type=int, default=90, metavar="Q",
                    help="HEIC quality for --archive (default 90)")
     g.add_argument("--list-sets", action="store_true", help="list generated sets and exit")
+    p.add_argument("--vary-from", metavar="FILE",
+                   help="use FILE's prompts as style/concept exemplars and generate "
+                        "fresh scenes in that register each run, instead of "
+                        "re-rendering the same lines every day")
     return p
 
 
@@ -846,11 +907,37 @@ def main():
             info("no OPENAI_API_KEY for prompt expansion -- using the literal theme")
             args.no_expand = True
 
+    stamp_seed = time.strftime("%Y%m%d-%H%M")
     text_model = (args.text_model or os.environ.get("WALLGEN_TEXT_MODEL")
                   or ("gpt-5.5" if use_azure_text else "gpt-4o-mini"))
 
     # --- prompts ----------------------------------------------------------
-    if args.prompts_file:
+    if args.vary_from:
+        vf = Path(args.vary_from).expanduser()
+        if not vf.is_file():
+            die(f"--vary-from not found: {vf}")
+        exemplars = [ln.strip() for ln in vf.read_text().splitlines()
+                     if ln.strip() and not ln.lstrip().startswith("#")]
+        if not exemplars:
+            die(f"--vary-from {vf} has no usable lines")
+        args.count = args.count or 6
+        info(f"varying {len(exemplars)} exemplars from {vf.name} into "
+             f"{args.count} fresh prompts via {text_model} ...")
+        # a per-run nudge so repeated runs do not converge on the same scenes
+        nudge = f" Vary the time of day, scale and setting; run seed {stamp_seed}."
+        try:
+            if use_azure_text:
+                prompts = vary_prompts(exemplars, args.count, text_model,
+                                       az_key(az_acct, az_grp),
+                                       base_url=az_endpoint(az_acct, az_grp),
+                                       azure=True, nudge=nudge)
+            else:
+                prompts = vary_prompts(exemplars, args.count, text_model, openai_key,
+                                       nudge=nudge)
+        except Exception as e:
+            info(f"variation failed ({e}); falling back to the exemplars verbatim")
+            prompts = exemplars[:args.count]
+    elif args.prompts_file:
         pf = Path(args.prompts_file).expanduser()
         if not pf.is_file():
             die(f"--prompts-file not found: {pf}")

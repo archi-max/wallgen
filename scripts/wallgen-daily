@@ -25,11 +25,16 @@ args=(-n "$COUNT" -q "$QUALITY" --jobs "$JOBS" --set)
 [ "${KEEP:-0}" -gt 0 ] 2>/dev/null && args+=(--prune "$KEEP")
 [ -n "${ARCHIVE_AFTER:-}" ] && args+=(--archive "$ARCHIVE_AFTER" --archive-quality "${ARCHIVE_QUALITY:-90}")
 [ -n "${PROVIDER:-}" ] && args+=(--provider "$PROVIDER")
-if [ -n "${PROMPTS_FILE:-}" ] && [ -f "${PROMPTS_FILE}" ]; then
+# VARY_FROM: use the file as style exemplars and invent fresh scenes each run.
+# PROMPTS_FILE: render those exact lines verbatim every run (repeats daily).
+if [ -n "${VARY_FROM:-}" ] && [ -f "${VARY_FROM}" ]; then
+  args=(--vary-from "$VARY_FROM" "${args[@]}")
+  label="${THEME:-$(basename "${VARY_FROM%.*}")}"
+elif [ -n "${PROMPTS_FILE:-}" ] && [ -f "${PROMPTS_FILE}" ]; then
   args=(--prompts-file "$PROMPTS_FILE" "${args[@]}")
   label="${THEME:-$(basename "${PROMPTS_FILE%.*}")}"
 else
-  label="${THEME:?set THEME or PROMPTS_FILE in $CONF}"
+  label="${THEME:?set THEME, VARY_FROM or PROMPTS_FILE in $CONF}"
 fi
 
 log "start: theme='${label}' count=${COUNT} quality=${QUALITY} keep=${KEEP} archive_after=${ARCHIVE_AFTER}"

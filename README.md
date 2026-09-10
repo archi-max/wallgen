@@ -121,7 +121,9 @@ wallgen "theme" [options]
 --set                set the first result as the desktop picture, verified
 --dry-run            print the prompts and exit, spend nothing
 --displays           show detected displays and exit
---prompts-file F     render a hand-authored set, one prompt per line
+--vary-from FILE     use FILE's prompts as style exemplars and invent fresh
+                     scenes in that register each run (best for daily use)
+--prompts-file F     render a hand-authored set verbatim, one prompt per line
 --no-expand          use the theme verbatim instead of expanding it
 --format             png (default) | jpg
 --jobs N             concurrent generations (default 2)
@@ -151,6 +153,18 @@ wallgen "my set" --prompts-file themes/example-concepts.txt
 ```
 
 See `themes/` for examples. The composition rules are still appended automatically.
+
+**`--prompts-file` repeats.** The same prompt yields the same scene, so running a
+fixed file on a daily schedule produces near-identical wallpapers every morning. For
+recurring use prefer `--vary-from`, which treats the file as *style and concept
+exemplars* and asks the text model for entirely new scenes in that register each run —
+your taste, new images daily.
+
+**`--prompts-file` repeats.** The same prompt yields the same scene, so running a
+fixed file on a daily schedule produces near-identical wallpapers every morning. For
+recurring use prefer `--vary-from`, which treats the file as *style and concept
+exemplars* and asks the text model for entirely new scenes in that register each run —
+your taste, new images daily.
 
 **Writing prompts that work:** state one idea as a *physical fact in the scene*,
 then let style trail as a clause. "A commuter crowd drawn as identical grey cutouts

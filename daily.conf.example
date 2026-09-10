@@ -5,7 +5,12 @@
 # Either a free-text THEME (expanded into distinct prompts by a text model)...
 THEME="quiet coastal towns at golden hour"
 
-# ...or a hand-authored prompt file, one prompt per line (takes precedence).
+# ...or a hand-authored file used as STYLE EXEMPLARS, with fresh scenes invented
+# in that register every run. Best of both: your taste, new images daily.
+# VARY_FROM="$HOME/.config/wallgen/my-prompts.txt"
+
+# ...or render a file's exact lines verbatim. Note this produces near-identical
+# images every day, since the same prompt yields the same scene.
 # PROMPTS_FILE="$HOME/.config/wallgen/my-prompts.txt"
 
 COUNT=6              # images per day
