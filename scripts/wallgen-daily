@@ -16,10 +16,14 @@ set -a; . "$CONF"; set +a   # export, so wallgen sees WALLGEN_AZURE_* etc
 
 COUNT="${COUNT:-6}"
 QUALITY="${QUALITY:-low}"
-KEEP="${KEEP:-7}"
+KEEP="${KEEP:-0}"
+ARCHIVE_AFTER="${ARCHIVE_AFTER:-3}"
 JOBS="${JOBS:-2}"
 
-args=(-n "$COUNT" -q "$QUALITY" --jobs "$JOBS" --prune "$KEEP" --set)
+args=(-n "$COUNT" -q "$QUALITY" --jobs "$JOBS" --set)
+# KEEP=0 (default) never deletes; ARCHIVE_AFTER compresses older sets instead
+[ "${KEEP:-0}" -gt 0 ] 2>/dev/null && args+=(--prune "$KEEP")
+[ -n "${ARCHIVE_AFTER:-}" ] && args+=(--archive "$ARCHIVE_AFTER" --archive-quality "${ARCHIVE_QUALITY:-90}")
 [ -n "${PROVIDER:-}" ] && args+=(--provider "$PROVIDER")
 if [ -n "${PROMPTS_FILE:-}" ] && [ -f "${PROMPTS_FILE}" ]; then
   args=(--prompts-file "$PROMPTS_FILE" "${args[@]}")
@@ -28,7 +32,7 @@ else
   label="${THEME:?set THEME or PROMPTS_FILE in $CONF}"
 fi
 
-log "start: theme='${label}' count=${COUNT} quality=${QUALITY} keep=${KEEP}"
+log "start: theme='${label}' count=${COUNT} quality=${QUALITY} keep=${KEEP} archive_after=${ARCHIVE_AFTER}"
 out="$("$HERE/wallgen" "$label" "${args[@]}" 2>&1)"
 rc=$?
 printf '%s\n' "$out" | sed -E $'s/\033\\[[0-9;]*m//g; s/^/    /' >>"$LOG"

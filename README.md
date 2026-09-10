@@ -132,7 +132,9 @@ rotation and housekeeping
 --rotate             advance the desktop picture one step and exit
 --rotate-scope       latest (default) | all
 --shuffle            with --rotate, pick randomly instead of in order
---prune N            after generating, keep only the N newest sets
+--archive N          compress sets older than the N newest to HEIC in place
+--archive-quality Q  HEIC quality for --archive (default 90)
+--prune N            after generating, DELETE all but the N newest sets
 --list-sets          list generated sets and exit
 ```
 
@@ -181,9 +183,29 @@ free text, or `PROMPTS_FILE` to point at your own prompt set. Re-run
 ./scripts/wallgen-setup uninstall   # remove agents; config and images kept
 ```
 
-Logs land in `~/.config/wallgen/daily.log`. `KEEP` (default 7) bounds disk use —
-without it, 6 images/day at ~6 MB is about 13 GB/year. The set currently on screen
-is never pruned.
+Logs land in `~/.config/wallgen/daily.log`.
+
+### Keeping everything without filling the disk
+
+Nothing is deleted by default (`KEEP=0`). Instead, `ARCHIVE_AFTER=3` transcodes sets
+older than the three newest from PNG to HEIC **in place** — the whole library stays,
+and archived images still work as wallpapers and still rotate.
+
+Measured on a 3024×1964 render:
+
+| | size | fidelity |
+|---|---|---|
+| PNG (original) | 7.46 MB | reference |
+| HEIC q90 | **1.47 MB** | 38.1 dB PSNR — transparent at viewing distance |
+| HEIC q95 | 2.43 MB | 38.5 dB — barely better for 65% more space |
+| HEIC q100 | 5.37 MB | 53.0 dB — near-lossless, only 28% saved |
+
+q90 is the efficient point, and is the default. In practice a 280 MB library
+compressed to 109 MB with every set intact.
+
+The original PNG is removed only after its HEIC replacement is confirmed written and
+smaller, and the image currently on screen is never touched. Set `KEEP` above zero
+only if you actually want old sets deleted.
 
 ## Notes
 

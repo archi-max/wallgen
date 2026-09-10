@@ -11,7 +11,12 @@ THEME="quiet coastal towns at golden hour"
 COUNT=6              # images per day
 QUALITY=low          # low | medium | high  — low is ~$0.01/image at 4K
 JOBS=2               # concurrent generations
-KEEP=7               # keep this many days of sets, delete older ones
+# Housekeeping. By default nothing is ever deleted.
+KEEP=0               # >0 DELETES all but the N newest sets. 0 = never delete.
+ARCHIVE_AFTER=3      # sets older than the N newest are transcoded to HEIC in
+                     # place: ~80% smaller, still usable as wallpaper. Blank to
+                     # leave everything as full-size PNG.
+ARCHIVE_QUALITY=90   # HEIC quality; 90 is visually transparent at this size
 
 # --- schedule --------------------------------------------------------------
 DAILY_HOUR=6         # generate at 06:30 local
