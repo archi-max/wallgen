@@ -346,14 +346,26 @@ def vary_prompts(exemplars: list[str], n: int, model: str, api_key: str,
         url = "https://api.openai.com/v1/chat/completions"
         headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
 
-    r = requests.post(url, headers=headers, json=body, timeout=180)
-    if r.status_code != 200:
-        raise RuntimeError(f"variation failed ({r.status_code}): {r.text[:300]}")
-    parsed = json.loads(r.json()["choices"][0]["message"]["content"])
-    out = [p.strip() for p in parsed["prompts"] if isinstance(p, str) and p.strip()]
-    if not out:
-        raise RuntimeError("variation returned no prompts")
-    return out[:n]
+    # Reasoning models need real time to write several detailed prompts, and the
+    # endpoint drops long-lived connections; retry rather than give up, because
+    # the fallback silently reintroduces the exact repetition this exists to fix.
+    last = None
+    for attempt in range(4):
+        try:
+            r = requests.post(url, headers=headers, json=body, timeout=600)
+            if r.status_code != 200:
+                raise RuntimeError(f"{r.status_code}: {r.text[:200]}")
+            parsed = json.loads(r.json()["choices"][0]["message"]["content"])
+            out = [p.strip() for p in parsed["prompts"] if isinstance(p, str) and p.strip()]
+            if not out:
+                raise RuntimeError("no prompts in response")
+            return out[:n]
+        except Exception as e:
+            last = e
+            if attempt < 3:
+                info(f"  variation attempt {attempt + 1} failed ({str(e)[:110]}); retrying")
+                time.sleep(5 * (attempt + 1))
+    raise RuntimeError(f"variation failed after 4 attempts: {last}")
 
 
 def literal_prompts(theme: str, n: int) -> list[str]:
@@ -935,8 +947,13 @@ def main():
                 prompts = vary_prompts(exemplars, args.count, text_model, openai_key,
                                        nudge=nudge)
         except Exception as e:
-            info(f"variation failed ({e}); falling back to the exemplars verbatim")
-            prompts = exemplars[:args.count]
+            # Last resort. Rotate the window into the exemplars so a bad day is
+            # not byte-identical to the previous one, and say so loudly.
+            off = int(time.strftime("%j")) % max(1, len(exemplars))
+            prompts = [exemplars[(off + i) % len(exemplars)] for i in range(args.count)]
+            print(f"\033[33mwarning:\033[0m prompt variation failed ({str(e)[:140]})")
+            print(f"\033[33mwarning:\033[0m fell back to exemplars {off}..{off + args.count - 1} "
+                  f"verbatim -- these images will resemble a previous set")
     elif args.prompts_file:
         pf = Path(args.prompts_file).expanduser()
         if not pf.is_file():
