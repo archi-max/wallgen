@@ -316,15 +316,42 @@ def expand_theme(theme: str, n: int, model: str, api_key: str, base_url: str | N
     return prompts[:n]
 
 
+def recent_prompts(root: Path, sets_back: int = 6) -> list[str]:
+    """Prompts from the most recent generated sets, newest first."""
+    out: list[str] = []
+    for d in list_sets(root)[:sets_back]:
+        pj = d / "prompts.json"
+        if not pj.is_file():
+            continue
+        try:
+            out.extend(json.loads(pj.read_text()).get("prompts", []))
+        except Exception:
+            continue
+    return out
+
+
 def vary_prompts(exemplars: list[str], n: int, model: str, api_key: str,
                  base_url: str | None = None, azure: bool = False,
-                 nudge: str = "") -> list[str]:
+                 nudge: str = "", avoid: list[str] | None = None) -> list[str]:
     """Generate n fresh prompts in the register of the exemplars.
 
     A fixed prompt file re-renders the same scenes every run; this keeps the
     hand-tuned style and concept discipline while changing what is depicted.
     """
     shown = "\n\n".join(f"EXEMPLAR {i}: {p}" for i, p in enumerate(exemplars, 1))
+    if avoid:
+        # Without this the model re-derives the same attractor every run: the
+        # exemplars imply "light carries meaning", the rules forbid unreal light,
+        # and mirrors are the only device left -- so it reaches for them daily.
+        prior = "\n".join(f"- {p[:180]}" for p in avoid[:40])
+        shown += (
+            "\n\nALREADY GENERATED in previous runs -- do not repeat these scenes, "
+            "and more importantly do not reuse their central DEVICE or mechanism "
+            "even in a new setting:\n" + prior +
+            "\n\nIf a mechanism appears above (for example relaying or focusing light "
+            "with mirrors), treat it as used up. Reach for a different physical "
+            "medium entirely: weight, tension, water, heat, sound, growth, "
+            "leverage, cold, sediment, magnetism, breath, time.")
     body = {
         "model": model,
         "messages": [
@@ -937,15 +964,18 @@ def main():
              f"{args.count} fresh prompts via {text_model} ...")
         # a per-run nudge so repeated runs do not converge on the same scenes
         nudge = f" Vary the time of day, scale and setting; run seed {stamp_seed}."
+        avoid = recent_prompts(root)
+        if avoid:
+            info(f"  avoiding {len(avoid)} prompts from recent sets")
         try:
             if use_azure_text:
                 prompts = vary_prompts(exemplars, args.count, text_model,
                                        az_key(az_acct, az_grp),
                                        base_url=az_endpoint(az_acct, az_grp),
-                                       azure=True, nudge=nudge)
+                                       azure=True, nudge=nudge, avoid=avoid)
             else:
                 prompts = vary_prompts(exemplars, args.count, text_model, openai_key,
-                                       nudge=nudge)
+                                       nudge=nudge, avoid=avoid)
         except Exception as e:
             # Last resort. Rotate the window into the exemplars so a bad day is
             # not byte-identical to the previous one, and say so loudly.

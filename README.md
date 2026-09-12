@@ -166,6 +166,12 @@ recurring use prefer `--vary-from`, which treats the file as *style and concept
 exemplars* and asks the text model for entirely new scenes in that register each run —
 your taste, new images daily.
 
+**Recurring mechanisms.** `--vary-from` passes the prompts from your recent sets to
+the text model as an explicit avoid-list, covering both the scenes *and* their central
+device. Without it the model re-derives the same local optimum every run — with
+light-heavy exemplars and a ban on unreal light sources, it reached for mirrors in
+every single batch — because each run is blind to what the previous ones produced.
+
 **Writing prompts that work:** state one idea as a *physical fact in the scene*,
 then let style trail as a clause. "A commuter crowd drawn as identical grey cutouts
 with one saturated figure turned the wrong way" produces something; "a moody
